@@ -1,0 +1,45 @@
+---
+title: "Median Income with IPUMS"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+---
+
+This script calculates the weighted median income of an arbitrary region (group of counties) using data from IPUMS-USA.
+
+```{r message = FALSE}
+library(tidyverse)
+library(ipumsr)
+library(matrixStats)
+```
+
+Read the data files.
+
+```{r}
+ddi <- read_ipums_ddi("usa_00006.xml")
+data <- read_ipums_micro(ddi)
+```
+
+Remove irrelevant data, including wages listed as 99999 and observations under age 25. Then calculate the weighted median income using the weightedMedian() function from the matrixStats library.
+
+```{r}
+tx <- data %>% filter(STATEFIP==48, INCWAGE != 0, INCWAGE < 999999, AGE >= 25)
+weightedMedian(tx$INCWAGE, tx$PERWT)
+```
+
+The FIPS codes listed here represent the counties of the Comptroller's Gulf Coast region. First calculate the total median income of the region, then calculate it by educational attainment: high school or equivalent, associate degree, bachelor's, and master's.
+
+```{r}
+gulfcoast <- tx %>% filter(COUNTYFIP %in% c(15,39,71,89,157,167,201,291,321,339,471,473,481))
+weightedMedian(gulfcoast$INCWAGE, gulfcoast$PERWT)
+gchighsch <- filter(gulfcoast, EDUCD == 62 | EDUCD == 63 | EDUCD == 64)
+weightedMedian(gchighsch$INCWAGE, gchighsch$PERWT)
+gcass <- filter(gulfcoast, EDUCD == 81 | EDUCD == 82 | EDUCD == 83)
+weightedMedian(gcass$INCWAGE, gcass$PERWT)
+gcbach <- filter(gulfcoast, EDUCD == 101)
+weightedMedian(gcbach$INCWAGE, gcbach$PERWT)
+gcmasters <- filter(gulfcoast, EDUCD==114)
+weightedMedian(gcmasters$INCWAGE, gcmasters$PERWT)
+```
